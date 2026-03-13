@@ -1,0 +1,33 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+.venv/
+.ruff_cache/
+
+# Dev-machine config (contains secrets)
+config/
+
+# Dev-machine (runtime artifacts and infrastructure)
+dev-machine-*.log
+.dev-machine-*
+.dev-machine/
+dev-machine.Dockerfile
+docker-compose.dev-machine.yaml
+scripts/dev-machine-*.sh
+
+# Session working files (not bundle content)
+STATE.yaml
+SCRATCH.md
+POST-MORTEM.md
+CONTEXT-TRANSFER.md
+AGENTS.md
+
+# Personal coaching data (generated per-user)
+data/reports/*.md
+!data/reports/.gitkeep
+
+# Test artifacts
+data/reports/test-*

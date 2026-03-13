@@ -1,0 +1,17 @@
+bundle:
+  name: coaching-behavior
+  version: 0.1.0
+  description: >
+    Metacognitive coaching capability for AI builders. Provides coaching agents
+    and workflow instructions for analyzing session history against the
+    5-dimension growth framework. Compose onto any bundle to add builder
+    coaching capability.
+
+agents:
+  include:
+    - builder-coach:coaching-agent
+    - builder-coach:coaching-storyteller
+
+context:
+  include:
+    - builder-coach:context/coach-instructions.md
