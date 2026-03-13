@@ -57,13 +57,26 @@ def test_required_directories_exist():
         assert (BUNDLE_ROOT / dirname).is_dir(), f"Required directory '{dirname}/' is missing"
 
 
-def test_agents_declared_in_bundle():
-    """bundle.md must declare the coaching-agent."""
-    fm = _parse_bundle_frontmatter(BUNDLE_ROOT / "bundle.md")
+def test_agents_declared_in_behavior():
+    """Coaching agents must be declared in behaviors/coaching.yaml."""
+    fm = _parse_bundle_frontmatter(BUNDLE_ROOT / "behaviors" / "coaching.yaml")
     agents = fm.get("agents", {})
     includes = agents.get("include", [])
     assert any("coaching-agent" in ref for ref in includes), (
-        f"coaching-agent must be declared in bundle.md agents.include. Found: {includes}"
+        f"coaching-agent must be declared in behaviors/coaching.yaml agents.include. Found: {includes}"
+    )
+    assert any("coaching-storyteller" in ref for ref in includes), (
+        f"coaching-storyteller must be declared in behaviors/coaching.yaml agents.include. Found: {includes}"
+    )
+
+
+def test_bundle_includes_coaching_behavior():
+    """bundle.md must include the coaching behavior."""
+    fm = _parse_bundle_frontmatter(BUNDLE_ROOT / "bundle.md")
+    includes = fm.get("includes", [])
+    sources = [inc.get("bundle", "") for inc in includes if isinstance(inc, dict)]
+    assert any("behaviors/coaching" in s for s in sources), (
+        f"bundle.md must include builder-coach:behaviors/coaching. Found: {sources}"
     )
 
 

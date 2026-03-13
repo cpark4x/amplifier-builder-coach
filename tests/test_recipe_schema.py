@@ -46,7 +46,7 @@ def test_weekly_retrospective_step_ids():
     """Each step must have an id matching the expected pipeline."""
     recipe = _load_recipe("weekly-retrospective.yaml")
     step_ids = [step["id"] for step in recipe["steps"]]
-    expected_ids = ["session-analysis", "journal-ingest", "coaching-evaluation", "write-report"]
+    expected_ids = ["session-analysis", "journal-ingest", "coaching-evaluation", "coaching-letter"]
     assert step_ids == expected_ids, f"Expected step ids {expected_ids}, got {step_ids}"
 
 
@@ -87,34 +87,34 @@ def test_session_nudge_has_required_fields():
     assert recipe.get("steps"), "Recipe must have steps"
 
 
-# --- Growth Chart Validation ---
+# --- Coaching Letter Step Validation ---
 
 
-def test_weekly_retrospective_writer_step_includes_chart_format():
-    """The writer step must define the text-based growth chart format."""
+def test_weekly_retrospective_letter_step_uses_storyteller():
+    """The coaching letter step must delegate to the coaching-storyteller."""
     recipe = _load_recipe("weekly-retrospective.yaml")
-    writer_step = [s for s in recipe["steps"] if s["id"] == "write-report"][0]
-    prompt = writer_step.get("prompt", "")
-    assert "YOUR BUILDER SHAPE" in prompt, (
-        "Writer step must include the text-based radar chart template"
+    letter_step = [s for s in recipe["steps"] if s["id"] == "coaching-letter"][0]
+    assert "agent" in letter_step, "Coaching letter step must specify an agent"
+    assert "coaching-storyteller" in letter_step["agent"], (
+        f"Coaching letter step must use the coaching-storyteller, got: {letter_step['agent']}"
     )
 
 
-def test_weekly_retrospective_writer_step_references_all_dimensions():
-    """The writer step chart must reference all five dimensions."""
+def test_weekly_retrospective_letter_step_receives_evaluation():
+    """The coaching letter step must reference the coaching evaluation output."""
     recipe = _load_recipe("weekly-retrospective.yaml")
-    writer_step = [s for s in recipe["steps"] if s["id"] == "write-report"][0]
-    prompt = writer_step.get("prompt", "")
-    dimensions = ["Problem Selection", "Leverage Ratio", "Taste", "Ambition", "Visibility"]
-    for dim in dimensions:
-        assert dim in prompt, f"Writer step chart must reference '{dim}'"
+    letter_step = [s for s in recipe["steps"] if s["id"] == "coaching-letter"][0]
+    prompt = letter_step.get("prompt", "")
+    assert "coaching_output" in prompt or "coaching-evaluation" in prompt, (
+        "Coaching letter step must reference the coaching evaluation output"
+    )
 
 
-def test_weekly_retrospective_writer_saves_to_reports_dir():
-    """The writer step must save the report to the reports directory."""
+def test_weekly_retrospective_letter_step_saves_to_reports_dir():
+    """The coaching letter step must save the report to the reports directory."""
     recipe = _load_recipe("weekly-retrospective.yaml")
-    writer_step = [s for s in recipe["steps"] if s["id"] == "write-report"][0]
-    prompt = writer_step.get("prompt", "")
+    letter_step = [s for s in recipe["steps"] if s["id"] == "coaching-letter"][0]
+    prompt = letter_step.get("prompt", "")
     assert "reports_dir" in prompt or "reports/" in prompt, (
-        "Writer step must save report to the reports directory"
+        "Coaching letter step must save report to the reports directory"
     )

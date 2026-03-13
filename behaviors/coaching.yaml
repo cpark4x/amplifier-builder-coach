@@ -1,3 +1,4 @@
+---
 bundle:
   name: coaching-behavior
   version: 0.1.0
@@ -15,3 +16,4 @@ agents:
 context:
   include:
     - builder-coach:context/coach-instructions.md
+---
