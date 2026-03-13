@@ -1,0 +1,140 @@
+name: weekly-retrospective
+description: >
+  Weekly coaching pipeline for AI builders. Chains four agents:
+  session analysis → journal ingest → coaching evaluation → written report.
+  Produces a weekly letter with growth chart saved to data/reports/.
+version: "0.1.0"
+tags: ["coaching", "retrospective", "growth", "weekly"]
+
+# Usage:
+#   "Run the weekly retrospective recipe"
+#   amplifier tool invoke recipes operation=execute recipe_path=@builder-coach:recipes/weekly-retrospective.yaml
+
+context:
+  # Override the week ending date (default: today)
+  week_ending: ""
+  # Path to growth journal
+  journal_path: "data/growth-journal.md"
+  # Directory for report output
+  reports_dir: "data/reports"
+
+steps:
+  # ==========================================================================
+  # Step 1: Session Analysis — mine Amplifier session logs from the past week
+  # ==========================================================================
+  - id: session-analysis
+    agent: "foundation:story-researcher"
+    timeout: 600
+    output: session_data
+    prompt: |
+      ANALYZE MODE.
+
+      Analyze Amplifier session logs from the past 7 days{% if week_ending != "" %} ending {{week_ending}}{% endif %}.
+
+      Look for session files in:
+      - ~/.amplifier/sessions/
+      - .amplifier/sessions/
+
+      For each session, extract:
+      1. **What was built** — projects, features, artifacts created
+      2. **Tools used** — which tools/functions were called and how often
+      3. **Iteration count** — how many user prompts per session (proxy for efficiency)
+      4. **Problem framing** — how problems were described and scoped
+      5. **Completions vs. abandonments** — what was finished, what was dropped
+      6. **Session duration** — time from first to last event
+
+      Structure your output as:
+
+      ## Session Summary — Week of [DATE]
+
+      **Sessions analyzed:** [count]
+      **Total time:** [estimate]
+
+      ### Session-by-Session Breakdown
+      For each session:
+      - Date and duration
+      - What was built
+      - Tool usage summary
+      - Iteration count
+      - Outcome (completed / in-progress / abandoned)
+
+      ### Patterns Observed
+      - What types of problems were worked on
+      - How efficient sessions were
+      - Any notable trends (e.g., sessions getting shorter/longer, more/less complex)
+
+      If no session data is available, report that clearly. The coaching agent
+      downstream handles the cold start case.
+
+  # ==========================================================================
+  # Step 2: Journal Ingest — read self-reported growth journal entries
+  # ==========================================================================
+  - id: journal-ingest
+    agent: "foundation:explorer"
+    timeout: 300
+    output: journal_data
+    prompt: |
+      Read the growth journal at {{journal_path}} and extract entries from the
+      past 7 days{% if week_ending != "" %} ending {{week_ending}}{% endif %}.
+
+      The journal is free-form markdown with date headers. Entries may include:
+      - Things published or shared (Visibility dimension)
+      - Feedback or adoption signals (Impact Moments)
+      - Conversations or insights not in session logs
+      - Intentions or goals for upcoming work
+
+      Merge with the session analysis data:
+
+      {{session_data}}
+
+      Produce a combined weekly evidence summary:
+
+      ## Combined Weekly Evidence
+
+      ### From Sessions (Automated)
+      [Summarize key session findings]
+
+      ### From Journal (Self-Reported)
+      [Summarize journal entries, or note if journal was empty]
+
+      ### Evidence Gaps
+      [Note what's missing — e.g., "No journal entries about sharing or visibility this week"]
+
+      If the journal file doesn't exist or has no recent entries, note that
+      clearly. The coaching agent handles empty journal data.
+
+  # ==========================================================================
+  # Step 3: Coaching Evaluation — assess against the growth framework
+  # ==========================================================================
+  - id: coaching-evaluation
+    agent: "builder-coach:coaching-agent"
+    timeout: 600
+    output: coaching_output
+    prompt: |
+      Evaluate this week's combined evidence against the growth framework.
+
+      {{journal_data}}
+
+      Check for previous weekly reports in {{reports_dir}}/ to understand
+      trajectory and compare to prior weeks. If no previous reports exist,
+      this is a cold start — follow your cold start handling instructions.
+
+      Produce your evaluation in the output format defined in your instructions.
+
+  # ==========================================================================
+  # Step 4: Transform evaluation into user-facing coaching letter
+  # ==========================================================================
+  - id: coaching-letter
+    agent: "builder-coach:coaching-storyteller"
+    timeout: 300
+    output: weekly_report
+    prompt: |
+      Here is the structured coaching evaluation:
+
+      {{coaching_output}}
+
+      Transform this evaluation into a coaching letter. Follow your output format
+      and writing constraints exactly.
+
+      After writing the letter, save it to `{{reports_dir}}/`.
+      Use today's date as the filename: `week-of-YYYY-MM-DD.md`.

@@ -1,0 +1,3 @@
+# amplifier-builder-coach dev machine
+*/15 * * * * /Users/chrispark/Projects/amplifier-builder-coach/scripts/dev-machine-watchdog.sh >> /Users/chrispark/Projects/amplifier-builder-coach/dev-machine-watchdog.log 2>&1
+*/10 * * * * /Users/chrispark/Projects/amplifier-builder-coach/scripts/dev-machine-monitor.sh >> /Users/chrispark/Projects/amplifier-builder-coach/dev-machine-monitor.log 2>&1

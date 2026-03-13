@@ -1,0 +1,52 @@
+name: session-nudge
+description: >
+  Lightweight session-start nudge. Reads the most recent weekly report and
+  produces a single-line intention for this session. One line, one intention,
+  then get out of the way.
+version: "0.1.0"
+tags: ["coaching", "nudge", "session-start"]
+
+# Usage:
+#   "Give me my session nudge"
+#   amplifier tool invoke recipes operation=execute recipe_path=@builder-coach:recipes/session-nudge.yaml
+
+context:
+  reports_dir: "data/reports"
+
+steps:
+  # ==========================================================================
+  # Step 1: Read latest report and produce one-line nudge
+  # ==========================================================================
+  - id: nudge
+    agent: "builder-coach:coaching-agent"
+    timeout: 120
+    output: session_nudge
+    prompt: |
+      NUDGE MODE — you are producing a session-start intention, not a full evaluation.
+
+      Read the most recent weekly report from {{reports_dir}}/ (the file with
+      the latest date in its filename).
+
+      Based on the report's coaching evaluation, produce EXACTLY ONE LINE —
+      a specific, actionable intention for this session.
+
+      Rules:
+      - ONE line. Not two. Not a paragraph. One sentence.
+      - Must be specific to what the report said (not generic motivation)
+      - Must be actionable TODAY in THIS session
+      - Tone: direct, confident, like a coach's whisper before the game
+
+      Good examples:
+      - "Last week your leverage ratio was flat. Today, try to accomplish something meaningful in under 3 exchanges."
+      - "You haven't started anything new in 2 weeks. Today, pick a problem you've never worked on."
+      - "You abandoned your last project after one session. Today, go back and finish it."
+
+      Bad examples (DO NOT produce these):
+      - "Keep up the good work!" (generic, not actionable)
+      - "Today, focus on improving your skills." (vague, not specific)
+      - Any multi-sentence response
+
+      If no previous report exists (first session), produce:
+      "First session — just build something. We'll start tracking next week."
+
+      Output ONLY the single line. Nothing else.

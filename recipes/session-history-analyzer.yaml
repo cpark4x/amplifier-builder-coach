@@ -1,0 +1,147 @@
+name: session-history-analyzer
+description: >
+  Analyze Amplifier session history and produce a coaching evaluation
+  against the 5-dimension growth framework. Works purely from session
+  data — no journal input required. On-demand, not calendar-locked.
+  Uses an adaptive evidence window: starts at 7 days, expands
+  automatically if fewer than 5 sessions are found.
+
+version: "0.2.0"
+tags: ["coaching", "session-history", "on-demand"]
+
+# Usage:
+#   "Coach me"
+#   "Analyze my session history"
+#   amplifier tool invoke recipes operation=execute recipe_path=recipes/session-history-analyzer.yaml
+#
+# Override the default window:
+#   recipes operation=execute recipe_path=recipes/session-history-analyzer.yaml context='{"date_range": "last 30 days"}'
+
+context:
+  reports_dir: "data/reports"
+  date_range: "adaptive"
+  min_sessions: "5"
+
+steps:
+  # ==========================================================================
+  # Step 1: Gather and structure session evidence (adaptive window)
+  # ==========================================================================
+  - id: gather-evidence
+    agent: "foundation:explorer"
+    timeout: 600
+    prompt: |
+      You are a session data preprocessor. Your job is to gather and structure
+      Amplifier session data for the coaching agent.
+
+      ## Evidence Window
+
+      Date range setting: {{date_range}}
+      Minimum sessions required: {{min_sessions}}
+
+      **If date_range is "adaptive" (default):**
+      Use an expanding window to find enough sessions for a meaningful evaluation.
+      1. Start with the last 7 days. Count sessions with activity.
+      2. If fewer than {{min_sessions}} active sessions → expand to 14 days.
+      3. If still fewer than {{min_sessions}} → expand to 28 days.
+      4. If still fewer than {{min_sessions}} → expand to 90 days (hard cap).
+      5. Evaluate with whatever the final window yields, even if under {{min_sessions}}.
+
+      At each step, you only need to COUNT sessions (check if events.jsonl exists
+      and has a recent modification date) — don't extract full summaries until you've
+      found the right window. This keeps the search fast.
+
+      **If date_range is a specific value** (e.g., "last 30 days", "since 2026-03-01"):
+      Use that range directly. Skip the adaptive expansion.
+
+      ## Instructions
+
+      1. **Find session directories.** Look in these locations:
+         - ~/.amplifier/sessions/
+         - ~/.amplifier/projects/*/sessions/
+         - .amplifier/sessions/
+
+         Each valid session is a directory containing an `events.jsonl` file.
+         Use file modification dates to filter to the evidence window.
+
+      2. **Check for a prior coaching report.** Look in `{{reports_dir}}/` for
+         `week-of-*.md` files. If one exists, note the most recent report date.
+         This is the boundary between "new evidence" and "established baseline."
+
+      3. **Extract session summaries.** For each session in the window:
+         - Count user and assistant messages
+         - List tools used and their call counts
+         - Note the first user message (session description/intent)
+         - Calculate session duration from first to last timestamp
+         - Note the session date and project directory
+
+      4. **Format the evidence.** Output a structured evidence block:
+
+         ```
+         ## Session Evidence
+
+         ### Scope
+         - Sessions found: [N]
+         - Evidence window: [N] days ([earliest] to [latest])
+         - Window method: adaptive (started at 7d, expanded to [N]d) | fixed ([date_range])
+         - Prior report: [date] or "None (first evaluation)"
+         - New sessions since last report: [N] (or "all" if first run)
+
+         ### Session Summaries
+         For each session (newest first):
+         - **[Date] — [First user message, truncated to 100 chars]**
+           Project: [name] | Duration: [X min] | Messages: [N user, N assistant] | Top tools: [tool1 (N), tool2 (N)]
+
+         ### Aggregate Patterns
+         - Total sessions: [N]
+         - Total time: [X hours]
+         - Most-used tools: [ranked list]
+         - Average session duration: [X min]
+         - Projects touched: [list]
+         ```
+
+      Be thorough within the evidence window. Include EVERY session from that period.
+      Do not filter or skip. The coaching agent will decide what matters.
+
+      Save the evidence to `{{reports_dir}}/session-evidence-latest.md`.
+
+  # ==========================================================================
+  # Step 2: Coaching evaluation against the growth framework
+  # ==========================================================================
+  - id: coaching-evaluation
+    agent: "builder-coach:coaching-agent"
+    timeout: 600
+    prompt: |
+      Here is the structured evidence from the user's Amplifier session history:
+
+      {{gather-evidence}}
+
+      Evaluate this evidence against the growth framework. Follow your evaluation
+      process for all five dimensions. Calibrate your confidence to the available
+      signal. Be transparent about the scope of your analysis.
+
+      Pay attention to the evidence window in the Scope section — if the window
+      expanded beyond 7 days to find enough sessions, that's a signal about
+      session frequency that's worth noting in your evaluation.
+
+      After writing your evaluation, save it to `{{reports_dir}}/`.
+      Use today's date as the filename: `eval-YYYY-MM-DD.md`.
+
+      This evaluation is an internal artifact — the coaching letter step will
+      produce the user-facing report.
+
+  # ==========================================================================
+  # Step 3: Transform evaluation into user-facing coaching letter
+  # ==========================================================================
+  - id: coaching-letter
+    agent: "builder-coach:coaching-storyteller"
+    timeout: 300
+    prompt: |
+      Here is the structured coaching evaluation:
+
+      {{coaching-evaluation}}
+
+      Transform this evaluation into a coaching letter. Follow your output format
+      and writing constraints exactly.
+
+      After writing the letter, save it to `{{reports_dir}}/`.
+      Use today's date as the filename: `week-of-YYYY-MM-DD.md`.
